@@ -1,43 +1,65 @@
-import {CREATED, BAD_REQUEST, UNAUTHORIZED} from 'http-status-codes';
 import * as loki from 'lokijs';
 import * as express from 'express';
+import {CREATED, BAD_REQUEST, UNAUTHORIZED} from 'http-status-codes';
 import * as basic from 'express-basic-auth';
 
-var app = express();
+
+let app = express();
 app.use(express.json());
 
-const adminFilter = basic({ users: { admin: 'P@ssw0rd!' }});
-
+const auth = basic({ users: { admin: 'root' }});
 const db = new loki(__dirname + '/db.dat', {autosave: true, autoload: true});
-let guests = db.getCollection('guests');
-if (!guests) {
-  guests = db.addCollection('guests');
+let visitors = db.getCollection('visitors');
+if (!visitors) {
+  visitors = db.addCollection('visitors');
 }
 
-app.get('/guests', adminFilter, (req, res) => {
-  res.send(guests.find());
+let partys = db.getCollection('partys');
+if(!partys){
+  partys = db.addCollection('Partys');
+}
+
+partys.insert({name: 'Christmas Party', location:'My House', date:'24.12.2018'})
+partys.insert({name: 'Halloween Party', location:'My House', date:'30.12.2018'})
+
+
+app.get('/party', function (req, res) {
+  let help='';
+  for(let i=1 ; i<=partys.data.length;i++){
+    help+=partys.get(i).name+' '+partys.get(i).location+' '+partys.get(i).date+'\n';
+  }
+  res.send(help);
 });
 
-app.get('/party', (req, res, next) => {
-  res.send({
-    title: 'Happy new year!',
-    location: 'At my home',
-    date: new Date(2017, 0, 1)
-  });
-});
-
-app.post('/register', (req, res, next) => {
-  if (!req.body.firstName || !req.body.lastName) {
-    res.status(BAD_REQUEST).send('Missing mandatory member(s)');
+app.post('/register:id', function(req, res){
+  if(!req.body.firstName || !req.body.lastName){
+     res.status(BAD_REQUEST).send("Invalid details!");
   } else {
-    const count = guests.count();
+    let count=0;
+    for(let i=1; i<=visitors.data.length;i++){
+      if(visitors.get(i).partyID===req.params.id){
+        count++;
+      }
+    }
     if (count < 10) {
-      const newDoc = guests.insert({firstName: req.body.firstName, lastName: req.body.lastName});
-      res.status(CREATED).send(newDoc);
+      visitors.insert({firstName: req.body.firstName, lastName: req.params.lastName, partyID: req.params.id});
+      res.status(CREATED).send('You are signed in for the party');
     } else {
       res.status(UNAUTHORIZED).send('Sorry, max. number of guests already reached');
     }
   }
 });
 
-app.listen(8080, () => console.log('API is listening'));
+app.get('/guests:id', auth, function(req,res){
+  let help='hopop';
+  for(let i=0; i<visitors.data.length;i++){
+    if(visitors.get(i).partyID===req.params.id){
+      help+=visitors.get(i).firstName+' '+visitors.get(i).lastName+'\n';
+    }
+  }
+  res.send(help);
+});
+
+app.listen(8080, function () {
+  console.log('app listening on port 8080!');
+});
