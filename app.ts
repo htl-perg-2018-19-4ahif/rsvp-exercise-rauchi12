@@ -31,7 +31,7 @@ app.get('/party', function (req, res) {
   res.send(help);
 });
 
-app.post('/register:id', function(req, res){
+app.post('/register/:id', function(req, res){
   if(!req.body.firstName || !req.body.lastName){
      res.status(BAD_REQUEST).send("Invalid details!");
   } else {
@@ -50,8 +50,8 @@ app.post('/register:id', function(req, res){
   }
 });
 
-app.get('/guests:id', auth, function(req,res){
-  let help='hopop';
+app.get('/guests/:id', auth, function(req,res){
+  let help='';
   for(let i=0; i<visitors.data.length;i++){
     if(visitors.get(i).partyID===req.params.id){
       help+=visitors.get(i).firstName+' '+visitors.get(i).lastName+'\n';
